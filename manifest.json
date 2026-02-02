@@ -2,7 +2,7 @@
   "name": "Рубиничк Качалка",
   "short_name": "Качалка",
   "description": "Приложение для отслеживания CrossFit тренировок",
-  "start_url": "/rubinchik-workout/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#1a2a6c",
   "theme_color": "#ffcc00",
@@ -21,4 +21,5 @@
   ],
   "categories": ["health", "fitness", "lifestyle"],
   "lang": "ru"
+
 }
