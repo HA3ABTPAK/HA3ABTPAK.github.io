@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <!-- PWA мета-теги -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffcc00">
+    <meta name="description" content="Приложение для отслеживания CrossFit тренировок">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Регистрация Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('Service Worker зарегистрирован:', registration);
+            })
+            .catch(error => {
+              console.log('Ошибка регистрации Service Worker:', error);
+            });
+        });
+      }
+      
+      // Проверка установки PWA
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        window.deferredPrompt = event;
+        console.log('PWA готово к установке');
+      });
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>РУБИНЧИК КАЧАЛКА</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 15px 0;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.8rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+        }
+        
+        .header p {
+            font-size: 1.4rem;
+        }
+        
+        .panels-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .panel h2 {
+            color: #ffcc00;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 1.8rem;
+            border-bottom: 2px solid #ffcc00;
+            padding-bottom: 8px;
+        }
+        
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        
+        .setting-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .setting-group input, 
+        .setting-group select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+        
+        .button {
+            background: linear-gradient(to right, #ff8c00, #ffcc00);
+            color: #1a1a1a;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4);
+        }
+        
+        .button:active {
+            transform: translateY(1px);
+        }
+        
+        .name-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .name-input {
+            flex: 3;
+        }
+        
+        .emoji-select {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+        
+        /* КРИТИЧЕСКИЙ БЛОК - участники должны помещаться в экран */
+        #participantsContainer {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            min-height: 300px;
+        }
+        
+        /* Стили для разных количеств участников с адаптацией */
+        .session_progress {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .four-participants {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .three-participants {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .participant {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+            overflow: hidden;
+        }
+        
+        .photo {
+            position: relative;
+            height: 120px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .participant-emoji {
+            font-size: 4rem;
+            text-align: center;
+        }
+        
+        .participant-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .progress-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 140px;
+        }
+        
+        .progress-bar-container {
+            height: 22px;
+            background: #333;
+            border-radius: 11px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 11px;
+        }
+        
+        .progress-text {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 90px;
+        }
+        
+        .progress-text p {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+        
+        .emoji-large {
+            font-size: 3.5rem;
+            display: block;
+        }
+        
+        .participant-time {
+            font-size: 1rem;
+            color: #ffcc00;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .timer-display {
+            text-align: center;
+            font-size: 2.8rem;
+            font-weight: bold;
+            margin: 15px 0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            letter-spacing: 3px;
+        }
+        
+        .timer-settings {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .timer-settings input {
+            flex: 1;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .info-item {
+            margin: 10px 0;
+            font-size: 1.2rem;
+        }
+        
+        .exercise-list {
+            list-style-type: none;
+            margin: 12px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .exercise-list li {
+            padding: 10px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+        
+        .remove-exercise-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .controls button {
+            flex: 1;
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .instructions h3 {
+            color: #ffcc00;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+            font-size: 1.1rem;
+        }
+        
+        /* МЕДИА-ЗАПРОСЫ ДЛЯ АДАПТАЦИИ К ТВ */
+        
+        /* Для больших экранов (Full HD и выше) */
+        @media (min-width: 1920px) {
+            .container {
+                max-width: 95vw;
+                padding: 15px;
+            }
+            
+            #participantsContainer {
+                gap: 20px;
+            }
+            
+            .participant {
+                min-height: 320px;
+                padding: 20px;
+            }
+            
+            .photo {
+                height: 140px;
+            }
+            
+            .participant-emoji {
+                font-size: 5rem;
+            }
+            
+            .progress-bar-container {
+                height: 25px;
+            }
+            
+            .progress-text p {
+                font-size: 1.4rem;
+            }
+            
+            .header h1 {
+                font-size: 3.5rem;
+            }
+            
+            .button {
+                padding: 16px;
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Для 4K экранов */
+        @media (min-width: 3840px) {
+            body {
+                font-size: 1.5rem;
+            }
+            
+            .container {
+                max-width: 90vw;
+                padding: 30px;
+            }
+            
+            #participantsContainer {
+                gap: 30px;
+            }
+            
+            .participant {
+                min-height: 450px;
+                padding: 30px;
+                border-radius: 20px;
+            }
+            
+            .photo {
+                height: 180px;
+                border-radius: 15px;
+            }
+            
+            .participant-emoji {
+                font-size: 7rem;
+            }
+            
+            .participant-name {
+                font-size: 1.8rem;
+                padding: 10px;
+            }
+            
+            .progress-bar-container {
+                height: 35px;
+                border-radius: 17px;
+            }
+            
+            .progress-text p {
+                font-size: 1.8rem;
+                min-height: 120px;
+            }
+            
+            .progress-text {
+                min-height: 150px;
+            }
+            
+            .header h1 {
+                font-size: 5rem;
+                margin-bottom: 15px;
+            }
+            
+            .header p {
+                font-size: 2rem;
+            }
+            
+            .button {
+                padding: 25px;
+                font-size: 1.8rem;
+                border-radius: 12px;
+            }
+            
+            .setting-group label {
+                font-size: 1.6rem;
+            }
+            
+            .setting-group input,
+            .setting-group select {
+                padding: 18px;
+                font-size: 1.6rem;
+                border-radius: 12px;
+            }
+            
+            .timer-display {
+                font-size: 4rem;
+                padding: 25px;
+            }
+        }
+        
+        /* Для узких экранов или мобильных */
+        @media (max-width: 768px) {
+            .session_progress {
+                grid-template-columns: 1fr;
+            }
+            
+            .three-participants {
+                grid-template-columns: 1fr;
+            }
+            
+            .panels-container {
+                flex-direction: column;
+            }
+            
+            .participant {
+                min-height: 250px;
+            }
+        }
+        
+        /* Автоматическая адаптация ширины для участников */
+        @media (max-width: 1200px) {
+            .session_progress.four-participants {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .session_progress.three-participants {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .session_progress.four-participants,
+            .session_progress.three-participants {
+                grid-template-columns: 1fr;
+            }
+            
+            .participant {
+                min-height: 200px;
+            }
+            
+            .photo {
+                height: 100px;
+            }
+            
+            .participant-emoji {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>КРОСФИНКТЕРЫ ПЕДИКИ</h1>
+            <p id="currentDate"></p>
+        </div>
+        
+        <div class="panels-container">
+            <div class="panel">
+                <h2>Участники</h2>
+                <div class="setting-group">
+                    <label for="participantCount">Количество участников:</label>
+                    <select id="participantCount" onchange="updateParticipants()">
+                        <option value="2">2 участника</option>
+                        <option value="3">3 участника</option>
+                        <option value="4" selected>4 участника</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label>Имена и эмодзи:</label>
+                    <div id="nameInputsContainer"></div>
+                    <button class="button" onclick="applyNames()">Применить имена</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>Упражнения</h2>
+                <div class="setting-group">
+                    <label for="exerciseSelect">Добавить упражнение:</label>
+                    <select id="exerciseSelect">
+                        <option value="Приседания">Приседания</option>
+                        <option value="Отжимания">Отжимания</option>
+                        <option value="Подтягивания">Подтягивания</option>
+                        <option value="Бурпи">Бурпи</option>
+                        <option value="Прыжки на скакалке">Прыжки на скакалке</option>
+                        <option value="Бег на месте">Бег на месте</option>
+                        <option value="Скалолаз">Скалолаз</option>
+                        <option value="Планка">Планка</option>
+                        <option value="Выпады">Выпады</option>
+                        <option value="Пресс">Пресс</option>
+                    </select>
+                    <button class="button" onclick="addExercise()">Добавить</button>
+                </div>
+                
+                <div class="setting-group">
+                    <label>Список упражнений:</label>
+                    <ul id="exerciseList" class="exercise-list"></ul>
+                    <button class="button" onclick="clearExercises()">Очистить все</button>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="roundCount">Количество кругов:</label>
+                    <input type="number" id="roundCount" min="1" value="1">
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>Комплексы</h2>
+                <div class="setting-group">
+                    <label for="complexSelect">Выберите комплекс:</label>
+                    <select id="complexSelect">
+                        <option value="">-- Выберите комплекс --</option>
+                        <!-- Комплексы будут добавлены скриптом -->
+                    </select>
+                    <button class="button" onclick="loadComplex()">Загрузить</button>
+                </div>
+                
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="timerEnabled"> Включить таймер
+                    </label>
+                    
+                    <div id="timerSettings" style="display:none;">
+                        <div class="timer-settings">
+                            <input type="number" id="timerMinutes" min="0" max="59" value="10" placeholder="Мин">
+                            <input type="number" id="timerSeconds" min="0" max="59" value="0" placeholder="Сек">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Блок таймера -->
+        <div id="timerDisplay" class="timer-display" style="display:none;">
+            <div id="timeLeft">10:00</div>
+        </div>
+        
+        <!-- Блок общего времени -->
+        <div id="totalDurationDisplay" class="timer-display" style="display:none;">
+            <div>Общее время: <span id="totalDuration">00:00</span></div>
+        </div>
+        
+        <!-- Прогресс участников - КРИТИЧЕСКИЙ БЛОК -->
+        <div id="participantsContainer" class="session_progress four-participants"></div>
+        
+        <!-- Информационная панель -->
+        <div class="info-panel">
+            <div class="info-item" id="start_time"></div>
+            <div class="info-item" id="duration"></div>
+            <div class="controls">
+                <button class="button" onclick="resetProgressBars()">Сбросить</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>Инструкция по управлению</h3>
+            <ul>
+                <li><strong>Клавиши 1-4</strong> - выбор участника для начала/завершения упражнения</li>
+                <li>Нажмите клавишу с номером участника, чтобы активировать его</li>
+                <li>После активации всех участников начнется отсчет времени</li>
+                <li>По мере выполнения упражнений нажимайте клавишу участника</li>
+                <li>Цвет индикатора показывает позицию участника: 🟢 - лидер, 🟡 - середина, 🔴 - отстающий</li>
+                <li>При завершении комплекса участник отмечается эмодзи</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация переменных
+        let date_start = undefined;
+        let start_triger = [];
+        let flag = false;
+        let flag_full_stop = false;
+        let participantSteps = [];
+        let participantNames = ['Участник 1', 'Участник 2', 'Участник 3', 'Участник 4'];
+        let participantEmojis = ['😀', '😎', '🤩', '🚀'];
+        let exe = []; 
+        let rounds = 1;
+        let step = 0;
+        let step_percent = 0;
+        let participantCount = 4;
+        let participantTimes = {};
+        let finishedParticipants = 0;
+        let isComplexFinished = false;
+        
+        // Переменные для таймера
+        let timerEnabled = false;
+        let timerInterval = null;
+        let timerDuration = 600;
+        let remainingTime = timerDuration;
+        let totalDurationInterval = null;
+        
+        // Переменные для управления звуком
+        let isMusicPlaying = false;
+        let isPlaceSoundPlaying = false;
+        let currentSoundIndex = 1;
+        let mainSoundsChainActive = false;
+
+        // Список доступных эмодзи
+        const availableEmojis = [
+            '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', 
+            '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', 
+            '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', 
+            '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', 
+            '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', 
+            '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', 
+            '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', 
+            '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', 
+            '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🦠', '💪', '👑', 
+            '🏆', '🚀', '🔥', '⭐', '❤️', '💥', '🎯', '🏋️', '⛹️', '🏃'
+        ];
+
+        // 30 популярных CrossFit комплексов
+        const crossfitComplexes = {
+            'catching up': ['20 выпадов с гантелью М/Ж 20/10 кг', '15 прыжков на тумбу М/Ж Low/Low', 'подтягивания М/Ж 10/5', 
+                '15 махи гири М/Ж 24/12 кг', '20 выпадов с гантелью М/Ж 20/10 кг', '10 болгарский присед М/Ж 20/10 кг', 
+                '20 бросков мяча М/Ж 9/6 кг', '10 рывков гантели М/Ж 20/10 кг', 'бег М/Ж 20/10 калл',
+            ],
+            'Бочамба': ['20 жимов от груди М/Ж 60/30 кг', '20 пресс', 'подтягивания М/Ж 10/5', 
+                'пуловер на верхнем блоке М/Ж 40/20 кг', 'трицепс на верхнем блоке М/Ж 30/15 кг', 'бицепс EZ-штангой М/Ж 20/10 кг', 
+            ],
+            'Кросфиторская фигна 26.1 (12 мин)': ['20 бросков мяча М/Ж 9/6 кг', '18 перепрыгиваний коробки М/Ж Low/Mdl', '30 бросков мяча М/Ж 9/6 кг', 
+                '18 перепрыгиваний коробки М/Ж Low/Mdl', '40 бросков мяча М/Ж 9/6 кг', '18 перешагиваний коробки с мячем М/Ж Low/Mdl', 
+                '66 бросков мяча М/Ж 9/6 кг', '18 перешагиваний коробки с мячем М/Ж Low/Mdl', '40 бросков мяча М/Ж 9/6 кг', 
+                '18 перепрыгиваний коробки М/Ж Low/Mdl', '30 бросков мяча М/Ж 9/6 кг', '18 перепрыгиваний коробки М/Ж Low/Mdl', 
+                '20 бросков мяча М/Ж 9/6 кг',
+            ],
+            'cindy': ['5 подтягиваний', '10 отжиманий', '15 приседаний'],
+            'helen': ['400м бег', '21 мах гирей', '12 подтягиваний'],
+            'nasty': ['50 приседаний', '7 подтягиваний', '10 отжиманий', '15 махов гирей'],
+            'badger': ['30 подтягиваний', '30 чистых швунгов', '30 прыжков на тумбу', '800м бег'],
+            'fight': ['1 минута велоэргометр', '1 минута прыжки на тумбу', '1 минута гиря', 
+                      '1 минута броски мяча', '1 минута гребля', '1 минута отдых'],
+            'fran': ['21-15-9 подтягивания', '21-15-9 трастеры'],
+            'grace': ['30 трастеров (60кг)'],
+            'isabel': ['30 рывков (60кг)'],
+            'diane': ['21-15-9 становые тяги (100кг)', '21-15-9 отжимания в стойке'],
+            'elizabeth': ['21-15-9 взятия на грудь (60кг)', '21-15-9 отжимания в стойке'],
+            'karen': ['150 бросков мяча в мишень (9кг)'],
+            'mary': ['5 отжиманий в стойке', '10 пистолетиков', '15 подтягиваний'],
+            'angie': ['100 подтягиваний', '100 отжиманий', '100 приседаний', '100 пресс'],
+            'jackie': ['1000м гребля', '50 трастеров (20кг)', '30 подтягиваний'],
+            'eva': ['800м бег', '30 гирь (32кг)', '30 подтягиваний'],
+            'michael': ['800м бег', '50 спичасти', '50 скручиваний'],
+            'amanda': ['9-7-5 рывок (60кг)', '9-7-5 подъемы на кольцах'],
+            'linda': ['10-9-8-7-6-5-4-3-2-1 становая (100кг)', '1.5BW жим', '2BW присед'],
+            'chelenge': ['10 махов гирей', '10 подтягиваний', '10 отжиманий', '10 приседаний'],
+            'dt': ['12 взятий на грудь (70кг)', '9 трастеров (70кг)', '6 толчков (70кг)'],
+            'filthy50': ['50 прыжков на коробку', '50 отжиманий', '50 подъемов корпуса', 
+                         '50 приседаний', '50 подтягиваний', '50 махов гирей', '50 выпадов', 
+                         '50 жимов гантелей', '50 прыжков со скакалкой', '50 берпи'],
+            'thechipper': ['100 подтягиваний', '100 отжиманий', '100 приседаний', '100 пресс'],
+            'murph': ['1 миля бег', '100 подтягиваний', '200 отжиманий', '300 приседаний', '1 миля бег'],
+            'manion': ['7 раундов: 400м бег', '29 приседаний со штангой (60кг)'],
+            'kingkong': ['3 подтягивания дедлифт', '2 жим штанги (100кг)', '1 трастер (100кг)'],
+            'gwen': ['15-12-9 взятия на грудь (60кг)'],
+            'josh': ['21 трастеры (40кг)', '21 подтягивания', '15 трастеры (40кг)', 
+                     '15 подтягивания', '9 трастеры (40кг)', '9 подтягивания'],
+            'danny': ['30 берпи', '400м бег', '30 трастеры (40кг)', '800м бег', '30 трастеры (40кг)', '400м бег', '30 берпи'],
+            'bay': ['30 махов гирей (32кг)', '30 трастеров (40кг)', '30 подтягиваний', 
+                    '30 махов гирей (32кг)', '30 трастеров (40кг)', '30 подтягиваний'],
+            'hotshots': ['6 подтягиваний', '11 приседаний', '400м бег', '6 подтягиваний', 
+                         '11 приседаний', '400м бег', '6 подтягиваний', '11 приседаний', '400м бег']
+        };
+
+        // Инициализация звуков
+        const sounds = {
+            intro: new Howl({ 
+                src: ['intro.mp3'], 
+                loop: true, 
+                volume: 1.0,
+                onload: function() {
+                    sounds.intro.play();
+                    isMusicPlaying = true;
+                }
+            }),
+            sound1: new Howl({ src: ['sound1.mp3'], volume: 1.0 }),
+            sound2: new Howl({ src: ['sound2.mp3'], volume: 1.0 }),
+            sound3: new Howl({ src: ['sound3.mp3'], volume: 1.0 }),
+            sound4: new Howl({ src: ['sound4.mp3'], volume: 1.0 }),
+            sound5: new Howl({ src: ['sound5.mp3'], volume: 1.0 }),
+            sound6: new Howl({ src: ['sound6.mp3'], volume: 1.0 }),
+            sound7: new Howl({ src: ['sound7.mp3'], volume: 1.0 }),
+            sound8: new Howl({ src: ['sound8.mp3'], volume: 1.0 }),
+            sound9: new Howl({ src: ['sound9.mp3'], volume: 1.0 }),
+            sound10: new Howl({ src: ['sound10.mp3'], volume: 1.0 }),
+            sound11: new Howl({ src: ['sound11.mp3'], volume: 1.0 }),
+            sound12: new Howl({ src: ['sound12.mp3'], volume: 1.0 }),
+            sound13: new Howl({ src: ['sound13.mp3'], volume: 1.0 }),
+            sound14: new Howl({ src: ['sound14.mp3'], volume: 1.0 }),
+            sound15: new Howl({ src: ['sound15.mp3'], volume: 1.0 }),
+            end: new Howl({ src: ['end.mp3'], volume: 1.0 }),
+            place1: new Howl({ src: ['place1.mp3'], volume: 1.0 }),
+            place2: new Howl({ src: ['place2.mp3'], volume: 1.0 }),
+            place3: new Howl({ src: ['place3.mp3'], volume: 1.0 }),
+            place: new Howl({ src: ['place.mp3'], volume: 1.0 })
+        };
+
+        // Функция для автоматической адаптации макета участников
+        function adaptParticipantsLayout() {
+            const container = document.getElementById('participantsContainer');
+            const containerWidth = container.offsetWidth;
+            const participantCount = parseInt(document.getElementById('participantCount').value);
+            
+            // Рассчитываем оптимальную ширину для участников
+            const minParticipantWidth = 350; // Минимальная ширина участника
+            const maxParticipantsPerRow = Math.floor(containerWidth / minParticipantWidth);
+            
+            let columns = participantCount;
+            
+            if (containerWidth < 900) {
+                columns = 1;
+            } else if (containerWidth < 1200) {
+                columns = Math.min(2, participantCount);
+            } else if (containerWidth < 1600) {
+                columns = Math.min(participantCount, maxParticipantsPerRow);
+            } else {
+                // Для очень широких экранов
+                columns = Math.min(participantCount, 4);
+            }
+            
+            // Применяем классы для сетки
+            container.className = 'session_progress';
+            
+            if (participantCount === 4) {
+                container.classList.add('four-participants');
+            } else if (participantCount === 3) {
+                container.classList.add('three-participants');
+            }
+            
+            // Принудительно устанавливаем количество колонок
+            container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            
+            console.log(`Адаптация: ширина ${containerWidth}px, участников ${participantCount}, колонок ${columns}`);
+        }
+
+        // Настройка цепочки воспроизведения основных звуков (1-15)
+        function setupSoundChain() {
+            sounds.sound1.on('end', () => {
+                currentSoundIndex = 2;
+                sounds.sound2.play();
+            });
+            sounds.sound2.on('end', () => {
+                currentSoundIndex = 3;
+                sounds.sound3.play();
+            });
+            sounds.sound3.on('end', () => {
+                currentSoundIndex = 4;
+                sounds.sound4.play();
+            });
+            sounds.sound4.on('end', () => {
+                currentSoundIndex = 5;
+                sounds.sound5.play();
+            });
+            sounds.sound5.on('end', () => {
+                currentSoundIndex = 6;
+                sounds.sound6.play();
+            });
+            sounds.sound6.on('end', () => {
+                currentSoundIndex = 7;
+                sounds.sound7.play();
+            });
+            sounds.sound7.on('end', () => {
+                currentSoundIndex = 8;
+                sounds.sound8.play();
+            });
+            sounds.sound8.on('end', () => {
+                currentSoundIndex = 9;
+                sounds.sound9.play();
+            });
+            sounds.sound9.on('end', () => {
+                currentSoundIndex = 10;
+                sounds.sound10.play();
+            });
+            sounds.sound10.on('end', () => {
+                currentSoundIndex = 11;
+                sounds.sound11.play();
+            });
+            sounds.sound11.on('end', () => {
+                currentSoundIndex = 12;
+                sounds.sound12.play();
+            });
+            sounds.sound12.on('end', () => {
+                currentSoundIndex = 13;
+                sounds.sound13.play();
+            });
+            sounds.sound13.on('end', () => {
+                currentSoundIndex = 14;
+                sounds.sound14.play();
+            });
+            sounds.sound14.on('end', () => {
+                currentSoundIndex = 15;
+                sounds.sound15.play();
+            });
+            sounds.sound15.on('end', () => {
+                currentSoundIndex = 1;
+                sounds.sound1.play();
+            });
+        }
+
+        // Функция для паузы всех основных звуков
+        function pauseMainSounds() {
+            for (let i = 1; i <= 15; i++) {
+                const soundKey = `sound${i}`;
+                if (sounds[soundKey] && sounds[soundKey].playing()) {
+                    sounds[soundKey].pause();
+                }
+            }
+        }
+
+        // Функция для возобновления основного звука
+        function resumeMainSound() {
+            if (isComplexFinished) return;
+            
+            if (currentSoundIndex >= 1 && currentSoundIndex <= 15) {
+                const soundKey = `sound${currentSoundIndex}`;
+                if (sounds[soundKey] && !sounds[soundKey].playing()) {
+                    sounds[soundKey].play();
+                }
+            }
+        }
+
+        // Воспроизведение звука места
+        function playPlaceSound(place) {
+            if (isPlaceSoundPlaying || isComplexFinished) return;
+            
+            isPlaceSoundPlaying = true;
+            pauseMainSounds();
+            
+            let placeSound;
+            switch(place) {
+                case 1:
+                    placeSound = sounds.place1;
+                    break;
+                case 2:
+                    placeSound = sounds.place2;
+                    break;
+                case 3:
+                    placeSound = sounds.place3;
+                    break;
+                default:
+                    placeSound = sounds.place;
+            }
+            
+            placeSound.play();
+            
+            placeSound.on('end', () => {
+                isPlaceSoundPlaying = false;
+                if (!isComplexFinished) {
+                    resumeMainSound();
+                }
+            });
+        }
+
+        // Элементы управления
+        const participantsContainer = document.getElementById('participantsContainer');
+        const nameInputsContainer = document.getElementById('nameInputsContainer');
+        const exerciseList = document.getElementById('exerciseList');
+        const exerciseSelect = document.getElementById('exerciseSelect');
+        const roundCountInput = document.getElementById('roundCount');
+        const participantCountSelect = document.getElementById('participantCount');
+        const complexSelect = document.getElementById('complexSelect');
+        
+        // Установка текущей даты
+        const now = new Date();
+        const formattedDate = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear()}`;
+        document.getElementById('currentDate').textContent = formattedDate;
+
+        // Назначение обработчиков
+        document.addEventListener('keydown', eventPressKey);
+        roundCountInput.addEventListener('change', updateRoundCount);
+
+        // Инициализация при загрузке
+        function init() {
+            // Настраиваем цепочку звуков
+            setupSoundChain();
+            
+            // Заполняем список комплексов
+            for (const complex in crossfitComplexes) {
+                const option = document.createElement('option');
+                option.value = complex;
+                option.textContent = complex.charAt(0).toUpperCase() + complex.slice(1);
+                complexSelect.appendChild(option);
+            }
+            
+            updateParticipants();
+            updateNameInputs();
+            updateExerciseList();
+            updateStep();
+            
+            // Настройка обработчиков для таймера
+            document.getElementById('timerEnabled').addEventListener('change', function() {
+                timerEnabled = this.checked;
+                const timerSettings = document.getElementById('timerSettings');
+                const timerDisplay = document.getElementById('timerDisplay');
+                
+                if (timerEnabled) {
+                    timerSettings.style.display = 'block';
+                    timerDisplay.style.display = 'block';
+                    updateTimerInputs();
+                } else {
+                    timerSettings.style.display = 'none';
+                    timerDisplay.style.display = 'none';
+                    stopTimer();
+                }
+            });
+            
+            // Обработчики изменения времени таймера
+            document.getElementById('timerMinutes').addEventListener('change', updateTimerInputs);
+            document.getElementById('timerSeconds').addEventListener('change', updateTimerInputs);
+            
+            // Запускаем адаптацию при загрузке и изменении размера
+            adaptParticipantsLayout();
+            window.addEventListener('resize', adaptParticipantsLayout);
+            
+            // Запуск фоновой музыки
+            setTimeout(() => {
+                if (!sounds.intro.playing()) {
+                    sounds.intro.play();
+                    isMusicPlaying = true;
+                }
+            }, 1000);
+        }
+        
+        // Обновление времени таймера из полей ввода
+        function updateTimerInputs() {
+            const minutes = parseInt(document.getElementById('timerMinutes').value) || 0;
+            const seconds = parseInt(document.getElementById('timerSeconds').value) || 0;
+            
+            timerDuration = minutes * 60 + seconds;
+            remainingTime = timerDuration;
+            updateTimerDisplay();
+        }
+        
+        // Обновление отображения таймера
+        function updateTimerDisplay() {
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            document.getElementById('timeLeft').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Запуск таймера
+        function startTimer() {
+            if (!timerEnabled) return;
+            
+            stopTimer();
+            
+            timerInterval = setInterval(() => {
+                remainingTime--;
+                updateTimerDisplay();
+                
+                if (remainingTime <= 0) {
+                    endComplex();
+                    stopTimer();
+                }
+            }, 1000);
+        }
+        
+        // Остановка таймера
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+        
+        // Запуск отсчета общего времени
+        function startTotalDurationTimer() {
+            const startTime = new Date();
+            
+            totalDurationInterval = setInterval(() => {
+                const now = new Date();
+                const duration = Math.floor((now - startTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                
+                document.getElementById('totalDuration').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+            
+            document.getElementById('totalDurationDisplay').style.display = 'block';
+        }
+        
+        // Остановка отсчета общего времени
+        function stopTotalDurationTimer() {
+            if (totalDurationInterval) {
+                clearInterval(totalDurationInterval);
+                totalDurationInterval = null;
+            }
+        }
+
+        // Обновление количества участников
+        function updateParticipants() {
+            participantCount = parseInt(participantCountSelect.value);
+            participantsContainer.innerHTML = '';
+            
+            participantSteps = [];
+            start_triger = [];
+            participantTimes = {};
+            
+            // Создаем участников
+            for (let i = 0; i < participantCount; i++) {
+                const participantId = String.fromCharCode(97 + i);
+                const participant = document.createElement('div');
+                participant.className = 'participant';
+                participant.id = participantId;
+                participant.innerHTML = `
+                    <div class="photo">
+                        <div class="participant-emoji">${participantEmojis[i]}</div>
+                        <div class="participant-name">${participantNames[i]}</div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="${participantId}_progress"></div>
+                        </div>
+                        <div class="progress-text">
+                            <p>${exe.length > 0 ? exe[0] : 'Выберите упражнения'}</p>
+                            <div class="participant-time" id="${participantId}_time"></div>
+                        </div>
+                    </div>
+                `;
+                participantsContainer.appendChild(participant);
+                
+                participantSteps.push(0);
+                start_triger.push(0);
+            }
+            
+            // Применяем адаптацию после создания участников
+            setTimeout(() => {
+                adaptParticipantsLayout();
+            }, 100);
+            
+            resetProgressBars();
+            updateNameInputs();
+        }
+
+        // Обновление полей для ввода имен и выбора эмодзи
+        function updateNameInputs() {
+            nameInputsContainer.innerHTML = '';
+            
+            for (let i = 0; i < participantCount; i++) {
+                const nameRow = document.createElement('div');
+                nameRow.className = 'name-input-row';
+                
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'name-input';
+                nameInput.placeholder = `Имя участника ${i+1}`;
+                nameInput.value = participantNames[i] || '';
+                nameInput.dataset.index = i;
+                
+                const emojiSelect = document.createElement('select');
+                emojiSelect.className = 'emoji-select';
+                emojiSelect.dataset.index = i;
+                
+                availableEmojis.forEach(emoji => {
+                    const option = document.createElement('option');
+                    option.value = emoji;
+                    option.textContent = emoji;
+                    if (emoji === participantEmojis[i]) {
+                        option.selected = true;
+                    }
+                    emojiSelect.appendChild(option);
+                });
+                
+                nameRow.appendChild(nameInput);
+                nameRow.appendChild(emojiSelect);
+                nameInputsContainer.appendChild(nameRow);
+            }
+        }
+
+        // Применение имен и эмодзи участников
+        function applyNames() {
+            const inputs = nameInputsContainer.querySelectorAll('.name-input');
+            const selects = nameInputsContainer.querySelectorAll('.emoji-select');
+            
+            for (let i = 0; i < participantCount; i++) {
+                if (i < inputs.length) {
+                    participantNames[i] = inputs[i].value || `Участник ${i+1}`;
+                    participantEmojis[i] = selects[i].value;
+                }
+            }
+            
+            updateParticipants();
+        }
+
+        // Обновление количества кругов
+        function updateRoundCount() {
+            rounds = parseInt(roundCountInput.value) || 1;
+            updateStep();
+            resetProgressBars();
+        }
+
+        // Добавление упражнения в список
+        function addExercise() {
+            const selectedExercise = exerciseSelect.value;
+            if (selectedExercise && !exe.includes(selectedExercise)) {
+                exe.push(selectedExercise);
+                updateExerciseList();
+                updateStep();
+                updateExerciseTextInProgressBars();
+            } else {
+                alert('Это упражнение уже добавлено!');
+            }
+        }
+
+        // Загрузка выбранного комплекса
+        function loadComplex() {
+            const selectedComplex = complexSelect.value;
+            if (!selectedComplex) {
+                alert('Пожалуйста, выберите комплекс!');
+                return;
+            }
+            
+            exe = [...crossfitComplexes[selectedComplex]];
+            updateExerciseList();
+            updateStep();
+            updateExerciseTextInProgressBars();
+            
+            if (selectedComplex === 'cindy') {
+                roundCountInput.value = 30;
+            } else if (selectedComplex === 'helen' || selectedComplex === 'nasty' || 
+                       selectedComplex === 'badger' || selectedComplex === 'fight') {
+                roundCountInput.value = 3;
+            } else {
+                roundCountInput.value = 1;
+            }
+            updateRoundCount();
+        }
+
+        // Очистка списка упражнений
+        function clearExercises() {
+            exe = [];
+            updateExerciseList();
+            updateStep();
+            resetProgressBars();
+        }
+
+        // Обновление отображения списка упражнений
+        function updateExerciseList() {
+            exerciseList.innerHTML = '';
+            exe.forEach((exercise, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="exercise-name">${index + 1}. ${exercise}</span>
+                    <button class="remove-exercise-btn" onclick="removeExercise(${index})">Удалить</button>
+                `;
+                exerciseList.appendChild(li);
+            });
+        }
+
+        // Удаление упражнения из списка
+        function removeExercise(index) {
+            exe.splice(index, 1);
+            updateExerciseList();
+            updateStep();
+            resetProgressBars();
+        }
+
+        // Обновление текста в прогресс-барах
+        function updateExerciseTextInProgressBars() {
+            const textElements = document.querySelectorAll('.progress-text p');
+            const firstExercise = exe.length > 0 ? exe[0] : 'Выберите упражнения';
+            
+            textElements.forEach(p => {
+                p.textContent = firstExercise;
+            });
+        }
+
+        // Обновление шага прогресса
+        function updateStep() {
+            step = exe.length * rounds;
+            step_percent = step > 0 ? 100 / step : 0;
+        }
+
+        // Сброс прогресс-баров
+        function resetProgressBars() {
+            isComplexFinished = false;
+            participantSteps = new Array(participantCount).fill(0);
+            flag = false;
+            flag_full_stop = false;
+            start_triger = new Array(participantCount).fill(0);
+            participantTimes = {};
+            finishedParticipants = 0;
+            
+            document.querySelectorAll('.progress-bar').forEach(bar => {
+                bar.style.width = '0%';
+                bar.style.backgroundColor = '#4CAF50';
+            });
+            
+            const firstExercise = exe.length > 0 ? exe[0] : 'Выберите упражнения';
+            document.querySelectorAll('.progress-text p').forEach((p, i) => {
+                if (i < participantCount) {
+                    p.textContent = firstExercise;
+                    p.className = '';
+                }
+            });
+            
+            document.querySelectorAll('.participant-time').forEach(timeElement => {
+                timeElement.textContent = '';
+            });
+            
+            document.getElementById('start_time').textContent = '';
+            document.getElementById('duration').textContent = '';
+            
+            stopTimer();
+            stopTotalDurationTimer();
+            document.getElementById('totalDurationDisplay').style.display = 'none';
+            
+            if (timerEnabled) {
+                remainingTime = timerDuration;
+                updateTimerDisplay();
+            }
+            
+            for (let i = 1; i <= 15; i++) {
+                const soundKey = `sound${i}`;
+                if (sounds[soundKey] && sounds[soundKey].playing()) {
+                    sounds[soundKey].stop();
+                }
+            }
+            if (sounds.end && sounds.end.playing()) {
+                sounds.end.stop();
+            }
+            
+            currentSoundIndex = 1;
+            mainSoundsChainActive = false;
+            
+            if (!sounds.intro.playing()) {
+                sounds.intro.play();
+            }
+        }
+
+        // Обработчик клавиш
+        function eventPressKey(event) {
+            if(flag_full_stop) return false;
+            
+            for (let i = 0; i < participantCount; i++) {
+                if (event.code === `Digit${i+1}`) {
+                    unlock(i);
+                }
+            }
+            
+            if (!start_triger.every(val => val === 1)) return false;
+            
+            if(!flag) {
+                if(exe.length === 0) {
+                    alert('Пожалуйста, добавьте упражнения перед началом тренировки!');
+                    return false;
+                }
+                
+                flag = true;
+                setTimeBegin();
+                
+                sounds.intro.stop();
+                sounds.sound1.play();
+                mainSoundsChainActive = true;
+                isMusicPlaying = true;
+                return false;
+            }
+            
+            for (let i = 0; i < participantCount; i++) {
+                if (event.code === `Digit${i+1}`) {
+                    handleParticipant(i, `${String.fromCharCode(97 + i)}_progress`);
+                }
+            }
+            
+            if(participantSteps.every(stepVal => stepVal === step)) {
+                endComplex();
+                flag_full_stop = true;
+            }
+        };
+
+        // Активация участника
+        function unlock(participantIndex) {
+            if (participantIndex < participantCount) {
+                start_triger[participantIndex] = 1;
+            }
+        }
+
+        // Обработка участника
+        function handleParticipant(participantIndex, progressId) {
+            if (participantIndex >= participantCount) return;
+            
+            let stepVar = participantSteps[participantIndex];
+            
+            if(stepVar >= step) return;
+            stepVar++;
+            
+            participantSteps[participantIndex] = stepVar;
+            
+            changeBar(progressId, stepVar);
+            updateExerciseText(participantIndex, stepVar);
+            setColorPosition(progressId, stepVar, participantIndex);
+            
+            if(stepVar === step) {
+                const participantId = String.fromCharCode(97 + participantIndex);
+                const textElement = document.querySelectorAll('.progress-text p')[participantIndex];
+                
+                textElement.innerHTML = '<span class="emoji-large">😎</span>';
+                
+                const date_end = new Date();
+                const duration = date_end - date_start;
+                participantTimes[participantId] = duration;
+                
+                const minutes = Math.floor(duration / 60000);
+                const seconds = Math.floor((duration % 60000) / 1000);
+                const timeText = `Время: ${minutes} мин ${seconds} сек`;
+                
+                const timeElement = document.getElementById(`${participantId}_time`);
+                if (timeElement) {
+                    timeElement.textContent = timeText;
+                }
+                
+                finishedParticipants++;
+                const place = finishedParticipants;
+                
+                playPlaceSound(place);
+            }
+        }
+
+        // Обновление ширины прогресс-бара
+        function changeBar(id, stepValue) {
+            const progress = document.getElementById(id);
+            if (progress) {
+                const percent = stepValue * step_percent;
+                progress.style.width = percent + '%';
+            }
+        }
+
+        // Обновление текста упражнения
+        function updateExerciseText(participantIndex, stepVar) {
+            if (stepVar < step && participantIndex < participantCount) {
+                const textElements = document.querySelectorAll('.progress-text p');
+                const exerciseIndex = stepVar % exe.length;
+                if (exerciseIndex < exe.length && textElements[participantIndex]) {
+                    const currentRound = Math.floor(stepVar / exe.length) + 1;
+                    textElements[participantIndex].textContent = `${exe[exerciseIndex]} (Круг ${currentRound})`;
+                    textElements[participantIndex].className = '';
+                }
+            }
+        }
+
+        // Установка цвета позиции
+        function setColorPosition(progressId, current, participantIndex) {
+            const element = document.getElementById(progressId);
+            if (!element) return;
+            
+            if (current === step) {
+                element.style.backgroundColor = '#2196F3';
+                return;
+            }
+            
+            const others = [...participantSteps];
+            others.splice(participantIndex, 1);
+            
+            const max = others.length > 0 ? Math.max(...others) : 0;
+            const min = others.length > 0 ? Math.min(...others) : 0;
+            
+            if (current > max) {
+                element.style.backgroundColor = '#4CAF50';
+            } else if (current <= min) {
+                element.style.backgroundColor = '#F44336';
+            } else {
+                element.style.backgroundColor = '#FFC107';
+            }
+        }
+
+        function setTimeBegin() {
+            date_start = new Date();
+            const hours = date_start.getHours().toString().padStart(2, '0');
+            const minutes = date_start.getMinutes().toString().padStart(2, '0');
+            const seconds = date_start.getSeconds().toString().padStart(2, '0');
+            document.getElementById('start_time').textContent = `Время начала: ${hours}:${minutes}:${seconds}`;
+            
+            startTimer();
+            startTotalDurationTimer();
+            
+            setTimeout(() => {
+                document.getElementById('participantsContainer').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center'
+                });
+            }, 500);
+        }
+
+        function endComplex() {
+            isComplexFinished = true;
+            
+            for (let i = 1; i <= 15; i++) {
+                const soundKey = `sound${i}`;
+                if (sounds[soundKey] && sounds[soundKey].playing()) {
+                    sounds[soundKey].stop();
+                }
+            }
+            
+            if (sounds.place.playing()) sounds.place.stop();
+            if (sounds.place1.playing()) sounds.place1.stop();
+            if (sounds.place2.playing()) sounds.place2.stop();
+            if (sounds.place3.playing()) sounds.place3.stop();
+            
+            sounds.end.play();
+            flag_full_stop = true;
+            stopTimer();
+            stopTotalDurationTimer();
+            
+            const date_end = new Date();
+            const duration = date_end - date_start;
+            const minutes = Math.floor(duration / 60000);
+            const seconds = Math.floor((duration % 60000) / 1000);
+            document.getElementById('duration').textContent = `Продолжительность: ${minutes} минут ${seconds} секунд`;
+        }
+
+        // Инициализация при загрузке
+        window.onload = init;
+    </script>
+</body>
+</html>
