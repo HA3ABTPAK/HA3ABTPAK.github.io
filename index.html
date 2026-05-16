@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <!-- 
+        ================================================================
+        БЛОК 1: PWA МЕТА-ТЕГИ
+        ================================================================
+        Эти теги нужны для того, чтобы сайт можно было установить 
+        как приложение на телефон (PWA - Progressive Web App)
+    -->
+    
+    <!-- viewport-fit=cover говорит телефону растягивать приложение на весь экран, 
+         включая область вокруг "чёлки" или выреза камеры -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <!-- theme-color задаёт цвет верхней панели браузера (в Chrome) -->
+    <meta name="theme-color" content="#ffcc00">
+    
+    <!-- Описание приложения, показывается при установке -->
+    <meta name="description" content="Приложение для отслеживания CrossFit тренировок">
+    
+    <!-- Эти два тега для iOS (iPhone/iPad): 
+         apple-mobile-web-app-capable позволяет открывать сайт как полноценное приложение без адресной строки -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- Цвет статус-бара на iOS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- manifest.json - файл с настройками PWA (иконки, название, цвета) -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Иконки для разных размеров экрана -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <!-- Иконка для iOS при добавлении на главный экран -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+        <!-- 
+        ================================================================
+        БЛОК 2: РЕГИСТРАЦИЯ SERVICE WORKER + АВТООБНОВЛЕНИЕ
+        ================================================================
+    -->
+    <script>
+      // Глобальная переменная для версии (будет заполнена из Service Worker)
+      window.APP_VERSION = null;
+      window.UPDATE_CHECK_INTERVAL = 60000; // 60 секунд
+      
+      // Функция получения версии из Service Worker
+      async function fetchAppVersionFromSW() {
+        if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+          console.log('Service Worker не активен, версия не получена');
+          return null;
+        }
+        
+        try {
+          const messageChannel = new MessageChannel();
+          const versionPromise = new Promise((resolve) => {
+            messageChannel.port1.onmessage = (event) => {
+              resolve(event.data.version);
+            };
+          });
+          
+          navigator.serviceWorker.controller.postMessage(
+            { type: 'CHECK_VERSION' },
+            [messageChannel.port2]
+          );
+          
+          const version = await versionPromise;
+          window.APP_VERSION = version;
+          console.log(`Версия приложения из SW: ${version}`);
+          return version;
+        } catch (error) {
+          console.error('Ошибка получения версии из SW:', error);
+          return null;
+        }
+      }
+      
+      // Проверяем, поддерживает ли браузер Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('Service Worker зарегистрирован:', registration);
+              
+              // Ждём активации SW и получаем версию
+              const waitForController = () => {
+                if (navigator.serviceWorker.controller) {
+                  fetchAppVersionFromSW();
+                } else {
+                  setTimeout(waitForController, 100);
+                }
+              };
+              waitForController();
+              
+              // Запускаем периодическую проверку обновлений
+              setInterval(() => {
+                console.log('Проверка обновлений...');
+                if (window.checkForUpdates) {
+                  window.checkForUpdates();
+                }
+              }, window.UPDATE_CHECK_INTERVAL);
+            })
+            .catch(error => {
+              console.log('Ошибка регистрации Service Worker:', error);
+            });
+        });
+      }
+      
+      // Событие beforeinstallprompt для установки PWA
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        window.deferredPrompt = event;
+        console.log('PWA готово к установке');
+      });
+    </script>
+
+    <!-- 
+        ================================================================
+        БЛОК 3: ОСНОВНЫЕ МЕТА-ТЕГИ И ПОДКЛЮЧЕНИЕ БИБЛИОТЕК
+        ================================================================
+    -->
+    <meta charset="UTF-8"> <!-- Кодировка для поддержки русского языка -->
+    
+    <!-- viewport для мобильных устройств: запрещаем масштабирование пальцами, 
+         чтобы интерфейс не "плыл" при случайных касаниях -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>РУБИНЧИК КАЧАЛКА</title> <!-- Название вкладки браузера -->
+    
+    <!-- Howler.js - библиотека для удобной работы со звуками 
+         (позволяет управлять громкостью, воспроизведением, цикличностью) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    
+    <!-- Подключение стилей (БЭМ + Mobile-first + CSS-переменные) -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 
+        ================================================================
+        БЛОК 4: HTML СТРУКТУРА (ТО ЧТО ВИДИТ ПОЛЬЗОВАТЕЛЬ)
+        ================================================================
+    -->
+    <div class="container">
+        
+        <!-- ==================== ЭКРАН НАСТРОЕК ==================== -->
+        <!-- Блок: setup -->
+        <div id="setupMode" class="setup">
+            
+            <!-- Элемент: setup__header (верхняя плашка с названием и датой) -->
+            <div class="setup__header">
+                <h1 class="setup__title">РУБИН СПОРТ</h1>
+                <p id="currentDate" class="setup__date"></p> <!-- Дата заполняется через JS -->
+            </div>
+            
+            <!-- Элемент: setup__panels (контейнер для трёх панелей) -->
+            <div class="setup__panels">
+                
+                <!-- ===== ПАНЕЛЬ 1: УЧАСТНИКИ ===== -->
+                <!-- Блок: panel -->
+                <div class="panel">
+                    <h2 class="panel__title">Участники</h2>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label" for="participantCount">Количество участников:</label>
+                        <select id="participantCount" class="panel__select">
+                            <option value="1">1 участника</option>
+                            <option value="2">2 участника</option>
+                            <option value="3">3 участника</option>
+                            <option value="4" selected>4 участника</option>
+                        </select>
+                    </div>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label">Имена и эмодзи:</label>
+                        <!-- Контейнер для динамического создания полей ввода имён -->
+                        <div id="nameInputsContainer"></div>
+                        <button id="applyNamesBtn" class="button">Применить имена</button>
+                    </div>
+                </div>
+                
+                <!-- ===== ПАНЕЛЬ 2: УПРАЖНЕНИЯ ===== -->
+                <div class="panel">
+                    <h2 class="panel__title">Упражнения</h2>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label" for="exerciseSelect">Добавить упражнение:</label>
+                        <select id="exerciseSelect" class="panel__select">
+                            <option value="Приседания">Приседания</option>
+                            <option value="Отжимания">Отжимания</option>
+                            <option value="Подтягивания">Подтягивания</option>
+                            <option value="Бурпи">Бурпи</option>
+                            <option value="Прыжки на скакалке">Прыжки на скакалке</option>
+                            <option value="Бег на месте">Бег на месте</option>
+                            <option value="Скалолаз">Скалолаз</option>
+                            <option value="Планка">Планка</option>
+                            <option value="Выпады">Выпады</option>
+                            <option value="Пресс">Пресс</option>
+                        </select>
+                        <button id="addExerciseBtn" class="button">Добавить</button>
+                    </div>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label">Список упражнений:</label>
+                        <!-- Блок: exercise-list -->
+                        <ul id="exerciseList" class="exercise-list"></ul>
+                        <button id="clearExercisesBtn" class="button">Очистить все</button>
+                    </div>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label" for="roundCount">Количество кругов:</label>
+                        <input type="number" id="roundCount" class="panel__input" inputmode="numeric" min="1" value="1">
+                    </div>
+                </div>
+                
+                <!-- ===== ПАНЕЛЬ 3: КОМПЛЕКСЫ ===== -->
+                <div class="panel">
+                    <h2 class="panel__title">Комплексы</h2>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label" for="complexSelect">Выберите комплекс:</label>
+                        <select id="complexSelect" class="panel__select">
+                            <option value="">-- Выберите комплекс --</option>
+                            <!-- Остальные опции добавляются через JS -->
+                        </select>
+                        <button id="loadComplexBtn" class="button">Загрузить</button>
+                    </div>
+                    
+                    <div class="panel__group">
+                        <label class="panel__label">
+                            <input type="checkbox" id="timerEnabled"> Включить таймер
+                        </label>
+                        
+                        <!-- Блок: timer-settings (по умолчанию скрыт) -->
+                        <div id="timerSettings" class="timer-settings" style="display:none;">
+                            <input type="number" id="timerMinutes" class="timer-settings__input" inputmode="numeric" min="0" max="59" value="10" placeholder="Мин">
+                            <input type="number" id="timerSeconds" class="timer-settings__input" inputmode="numeric" min="0" max="59" value="0" placeholder="Сек">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Большая кнопка старта (модификатор button--start) -->
+            <button id="startWorkoutBtn" class="button button--start">🚀 НАЧАТЬ ТРЕНИРОВКУ</button>
+        </div>
+        
+        <!-- ==================== ЭКРАН ТРЕНИРОВКИ ==================== -->
+        <!-- Блок: workout (по умолчанию скрыт классом hidden) -->
+        <div id="workoutMode" class="workout hidden">
+            
+            <!-- Элемент: workout__header (верхняя панель) -->
+            <div class="workout__header">
+                <!-- Кнопка меню -->
+                <button id="menuBtn" class="workout__menu-btn">☰</button>
+                <!-- Таймер обратного отсчёта -->
+                <div id="timerDisplayWorkout" class="workout__timer">10:00</div>
+                <!-- Общее время тренировки -->
+                <div id="totalTimeDisplay" class="workout__total-time">00:00</div>
+            </div>
+            
+            <!-- Элемент: workout__participants (контейнер для карточек участников) -->
+            <div id="participantsContainer" class="workout__participants"></div>
+            
+            <!-- Элемент: workout__controls (кнопки управления) -->
+            <div class="workout__controls">
+                <button id="endWorkoutBtn" class="button">🏁 ЗАВЕРШИТЬ</button>
+            </div>
+        </div>
+        
+        <!-- ==================== МЕНЮ (ВСПЛЫВАЕТ ПОВЕРХ ТРЕНИРОВКИ) ==================== -->
+        <!-- Блок: menu -->
+        <div id="menuOverlay" class="menu">
+            <!-- Элемент: menu__content -->
+            <div class="menu__content">
+                <h2 class="menu__title">Меню</h2>
+                <button id="resetWorkoutBtn" class="button">🔄 Сбросить тренировку</button>
+                <button id="backToSetupBtn" class="button">⚙️ Вернуться к настройкам</button>
+                <!-- Модификатор button--close (серая кнопка) -->
+                <button id="closeMenuBtn" class="button button--close">✖ Закрыть</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- 
+        ================================================================
+        БЛОК 5: ПОДКЛЮЧЕНИЕ JAVASCRIPT
+        ================================================================
+    -->
+    <script src="script.js" defer></script>
+</body>
+</html>
