@@ -1,7 +1,7 @@
 // ============================================================
 // НАСТРОЙКИ PWA АВТООБНОВЛЕНИЯ
 // ============================================================
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 const UPDATE_INTERVAL_MS = 60000;
 const CACHE_NAME = `rubinchik-v${APP_VERSION}`;
 
@@ -19,6 +19,7 @@ const criticalFiles = [
 // ===== АУДИОФАЙЛЫ (КЭШИРУЮТСЯ В ФОНЕ, НЕ БЛОКИРУЮТ УСТАНОВКУ) =====
 const audioFiles = [
   './sound/intro.mp3',
+  './sound/click.mp3',
   './sound/sound1.mp3', './sound/sound2.mp3', './sound/sound3.mp3', './sound/sound4.mp3', './sound/sound5.mp3',
   './sound/sound6.mp3', './sound/sound7.mp3', './sound/sound8.mp3', './sound/sound9.mp3', './sound/sound10.mp3',
   './sound/sound11.mp3', './sound/sound12.mp3', './sound/sound13.mp3', './sound/sound14.mp3', './sound/sound15.mp3',

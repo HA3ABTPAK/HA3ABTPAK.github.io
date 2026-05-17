@@ -78,6 +78,7 @@ const crossfitComplexes = {
 // Howl - это объект из библиотеки Howler.js для работы со звуком
 const sounds = {
     intro: new Howl({ src: ['sound/intro.mp3'], loop: true, volume: 1.0 }), // Фоновая музыка при запуске, играет по кругу
+    click: new Howl({ src: ['sound/click.mp3'], volume: 2.0 }),
     sound1: new Howl({ src: ['sound/sound1.mp3'], volume: 1.0 }),
     sound2: new Howl({ src: ['sound/sound2.mp3'], volume: 1.0 }),
     sound3: new Howl({ src: ['sound/sound3.mp3'], volume: 1.0 }),
@@ -683,6 +684,11 @@ function handleParticipantClick(index) {
 // ==================== 6.11: ЛОГИКА ПРОГРЕССА УЧАСТНИКА ====================
 
 function handleParticipant(index, progressId) {
+    // ===== ЗВУК НАЖАТИЯ =====
+    if (sounds.click && !flag_full_stop) {
+        sounds.click.play();
+    }
+    
     if (index >= participantCount) return;
     let stepVar = participantSteps[index];
     if (stepVar >= step) return;
