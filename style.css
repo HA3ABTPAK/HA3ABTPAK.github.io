@@ -338,42 +338,41 @@ body {
 
 .workout__header {
     display: flex;
-    flex-shrink: 0;
     align-items: center;
-    gap: var(--space-lg);
+    gap: 10px;
     margin-bottom: var(--space-lg);
 }
 
 .workout__menu-btn {
     flex-shrink: 0;
-    padding: var(--space-lg) var(--space-2xl);
-    font-size: 1.3rem;
-    font-weight: bold;
-    color: var(--color-primary);
-    background: var(--overlay-medium);
-    border: 2px solid var(--color-primary);
-    border-radius: var(--radius-md);
-    cursor: pointer;
+    width: 60px;
 }
 
 .workout__timer {
+    flex-shrink: 0;
+    width: 80px;
+    text-align: center;
+    color: #ff4444;
+}
+
+.workout__complex-name {
     flex: 1;
+    min-width: 0;
     padding: var(--space-lg);
-    font-size: var(--timer-font-size);
+    font-size: 1rem;
     font-weight: bold;
     text-align: center;
-    letter-spacing: 3px;
     background: var(--overlay-light);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .workout__total-time {
     flex-shrink: 0;
-    padding: var(--space-lg);
-    font-size: var(--total-time-font-size);
+    width: 80px;
     text-align: center;
-    background: var(--overlay-light);
-    border-radius: var(--radius-md);
 }
 
 .workout__participants {

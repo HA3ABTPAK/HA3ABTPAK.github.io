@@ -73,6 +73,9 @@ const crossfitComplexes = {
     'Бочамба': ['Жим от груди 60 кг/20 раз', 'Пресс 20 раз', 'Подтягивания 10 раз', 'Тяга блока стоя, руки прямые 80 фунт/20 раз', 'Прицепс 60 фунт/20 раз', 'Бицепс EZ 20 кг/20 раз'],
 };
 
+let currentComplexName = 'Пользовательский';
+let complexWasSelected = false;
+
 // ==================== 6.2: ИНИЦИАЛИЗАЦИЯ ЗВУКОВ ====================
 
 // Howl - это объект из библиотеки Howler.js для работы со звуком
@@ -440,6 +443,9 @@ function addExercise() {
     const ex = document.getElementById('exerciseSelect').value;
     if (ex && !exe.includes(ex)) {
         exe.push(ex);
+        if (!complexWasSelected) {
+            currentComplexName = 'Пользовательский';
+        }
         updateExerciseList();
         updateStep();
     }
@@ -448,6 +454,9 @@ function addExercise() {
 function loadComplex() {
     const complex = document.getElementById('complexSelect').value;
     if (!complex) return alert('Выберите комплекс!');
+    
+    currentComplexName = complex;
+    complexWasSelected = true;
     exe = [...crossfitComplexes[complex]];
     updateExerciseList();
     updateStep();
@@ -459,6 +468,8 @@ function loadComplex() {
 
 function clearExercises() {
     exe = [];
+    currentComplexName = 'Пользовательский';
+    complexWasSelected = false;
     updateExerciseList();
     updateStep();
 }
@@ -482,7 +493,12 @@ function updateExerciseList() {
     document.querySelectorAll('.exercise-list__remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
-            removeExercise(index);
+            exe.splice(index, 1);
+            if (!complexWasSelected) {
+                currentComplexName = 'Пользовательский';
+            }
+            updateExerciseList();
+            updateStep();
         });
     });
 }
@@ -518,6 +534,12 @@ function startWorkout() {
     }
     
     document.getElementById('totalTimeDisplay').textContent = '00:00';
+
+    // Отображаем название комплекса
+    const complexNameElement = document.getElementById('complexNameDisplay');
+    if (complexNameElement) {
+        complexNameElement.textContent = currentComplexName;
+    }
 }
 
 function showMenu() {
