@@ -720,21 +720,26 @@ function handleParticipant(index, progressId) {
     
     if (stepVar === step) {
         bar.classList.add('progress__bar--finished');
-        document.querySelectorAll('.progress__exercise')[index].innerHTML = '<span class="progress__emoji">😎</span>';
         
+        // Текст места вместо упражнения
+        let placeDisplay = '';
+        switch(finishedParticipants) {
+            case 1: placeDisplay = '👑 - ПОБЕДИТЕЛЬ'; break;
+            case 2: placeDisplay = '😎 - 2 МЕСТО'; break;
+            case 3: placeDisplay = '🥺 - 3 МЕСТО'; break;
+            default: placeDisplay = '🤬 - 4 МЕСТО';
+        }
+        document.querySelectorAll('.progress__exercise')[index].innerHTML = `<span class="progress__emoji">${placeDisplay}</span>`;
+        
+        // Время
         const duration = new Date() - date_start;
         const mins = Math.floor(duration / 60000);
         const secs = Math.floor((duration % 60000) / 1000);
+        
         document.getElementById(`${String.fromCharCode(97 + index)}_time`).textContent = `Время: ${mins} мин ${secs} сек`;
         
         finishedParticipants++;
         playPlaceSound(finishedParticipants);
-    } else if (stepVar > max) {
-        bar.classList.add('progress__bar--leading');
-    } else if (stepVar <= min) {
-        bar.classList.add('progress__bar--falling-behind');
-    } else {
-        bar.classList.add('progress__bar--middle');
     }
 }
 
