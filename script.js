@@ -496,6 +496,11 @@ function updateStep() {
 
 function startWorkout() {
     if (exe.length === 0) return alert('Добавьте упражнения!');
+
+    // Проверка ориентации экрана
+    if (window.innerHeight > window.innerWidth) {
+        alert("📱 Поверните телефон горизонтально для удобной тренировки!");
+    }
     
     currentSoundIndex = 1;
     
