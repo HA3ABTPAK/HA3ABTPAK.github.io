@@ -721,6 +721,8 @@ function handleParticipant(index, progressId) {
     if (stepVar === step) {
         bar.classList.add('progress__bar--finished');
         
+        finishedParticipants++;  // <-- СНАЧАЛА УВЕЛИЧИВАЕМ
+        
         // Текст места вместо упражнения
         let placeDisplay = '';
         switch(finishedParticipants) {
@@ -738,7 +740,6 @@ function handleParticipant(index, progressId) {
         
         document.getElementById(`${String.fromCharCode(97 + index)}_time`).textContent = `Время: ${mins} мин ${secs} сек`;
         
-        finishedParticipants++;
         playPlaceSound(finishedParticipants);
     }
 }
