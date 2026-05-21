@@ -1,7 +1,7 @@
 // ============================================================
 // НАСТРОЙКИ PWA АВТООБНОВЛЕНИЯ
 // ============================================================
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.4.4';
 const UPDATE_INTERVAL_MS = 60000;
 const CACHE_NAME = `rubinchik-v${APP_VERSION}`;
 
